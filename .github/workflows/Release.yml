@@ -1,10 +1,9 @@
 name: Build and Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
-      - 'v1.0'  # 当推送标签 (如 v1.0、v1.1) 时触发工作流
+      - 'v*'  # 触发条件：推送标签 (v1.0 等)
 
 jobs:
   build:
@@ -27,29 +26,32 @@ jobs:
             goarch: amd64
 
     steps:
-      # 1. 检出代码
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. 设置 Go 环境
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
-      # 3. 编译二进制文件
+      - name: Tidy Go Modules
+        run: go mod tidy
+
       - name: Build Binary for ${{ matrix.os }}
         run: |
           export GOOS=${{ matrix.goos }}
           export GOARCH=${{ matrix.goarch }}
-          go build -o CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
+          mkdir -p build
+          go build -o build/CloudflareST_${{ matrix.os }}_${{ matrix.arch }} ./
 
-      # 4. 上传二进制文件为构建产物
+      - name: Check Built File
+        run: ls -lh build/
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
-          path: CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
+          path: build/CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
 
   release:
     name: Create Release
@@ -57,17 +59,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 检出代码
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. 下载所有构建产物
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      # 3. 创建 Release 并上传文件
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
