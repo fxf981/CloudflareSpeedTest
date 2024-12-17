@@ -1,0 +1,44 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'  # 当推送标签如 v1.0、v1.1 时触发该工作流
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 设置 Go 环境（如果需要编译）
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'  # 选择你的 Go 版本
+
+      # 3. 编译二进制文件（为 FreeBSD 和 Linux 编译）
+      - name: Build binaries
+        run: |
+          GOOS=freebsd GOARCH=amd64 go build -o CloudflareST_freebsd
+          GOOS=linux GOARCH=amd64 go build -o CloudflareST_linux
+
+      # 4. 创建 Release 并上传二进制文件
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            **What's New**
+            - Add description of changes here.
+          files: |
+            CloudflareST_freebsd
+            CloudflareST_linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
