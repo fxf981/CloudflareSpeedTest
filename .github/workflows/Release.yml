@@ -1,44 +1,81 @@
-name: Create Release
+name: Build and Release
 
 on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*'  # 当推送标签如 v1.0、v1.1 时触发该工作流
+      - 'v*'  # 当推送标签 (如 v1.0、v1.1) 时触发工作流
 
 jobs:
-  create-release:
-    name: Create GitHub Release
+  build:
+    name: Build for Multiple Platforms
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os: [freebsd, linux, windows]
+        arch: [amd64]
+        include:
+          - os: freebsd
+            goos: freebsd
+            goarch: amd64
+          - os: linux
+            goos: linux
+            goarch: amd64
+          - os: windows
+            goos: windows
+            goarch: amd64
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. 设置 Go 环境
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      # 3. 编译二进制文件
+      - name: Build Binary for ${{ matrix.os }}
+        run: |
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          go build -o CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
+
+      # 4. 上传二进制文件为构建产物
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
+          path: CloudflareST_${{ matrix.os }}_${{ matrix.arch }}
+
+  release:
+    name: Create Release
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
       # 1. 检出代码
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. 设置 Go 环境（如果需要编译）
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      # 2. 下载所有构建产物
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.21'  # 选择你的 Go 版本
+          path: artifacts
 
-      # 3. 编译二进制文件（为 FreeBSD 和 Linux 编译）
-      - name: Build binaries
-        run: |
-          GOOS=freebsd GOARCH=amd64 go build -o CloudflareST_freebsd
-          GOOS=linux GOARCH=amd64 go build -o CloudflareST_linux
-
-      # 4. 创建 Release 并上传二进制文件
+      # 3. 创建 Release 并上传文件
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
-            **What's New**
-            - Add description of changes here.
-          files: |
-            CloudflareST_freebsd
-            CloudflareST_linux
+            ## Changes
+            - Automatically generated release for version ${{ github.ref_name }}.
+          files: artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
