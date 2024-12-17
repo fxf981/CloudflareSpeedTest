@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # 触发条件：推送标签 (v1.0 等)
+      - 'v1.1'  # 触发条件：推送标签 (v1.0 等)
 
 jobs:
   build:
