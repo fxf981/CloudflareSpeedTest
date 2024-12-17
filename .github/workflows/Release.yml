@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*'  # 当推送标签 (如 v1.0、v1.1) 时触发工作流
+      - 'v1.0'  # 当推送标签 (如 v1.0、v1.1) 时触发工作流
 
 jobs:
   build:
