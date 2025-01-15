@@ -51,7 +51,7 @@ jobs:
       GOARCH: ${{ matrix.goarch }}
       GOARM: ${{ matrix.goarm }}
       CGO_ENABLED: 0
-      version: "v2.2.5"
+      version: "v22.2.5"
 
     steps:
       - name: Checkout codebase
